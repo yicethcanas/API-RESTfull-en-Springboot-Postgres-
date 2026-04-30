@@ -2,7 +2,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: postgres-calendario
+    container_name: dockerbdcalendario
     ports:
       - "5432:5432"
     environment:
@@ -12,7 +12,35 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./bd/init-docker.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d CalendarioLaboral1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redcalendario
     restart: unless-stopped
+
+  springboot-api:
+    build: .
+    container_name: dockerapicalendario
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/CalendarioLaboral1
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: sa
+      FESTIVOS_API_BASE_URL: http://dockerapifestivos:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - redcalendario
+    restart: unless-stopped
+
+networks:
+  redcalendario:
+    external: true
 
 volumes:
   postgres-data:
